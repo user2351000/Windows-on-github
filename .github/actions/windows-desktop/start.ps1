@@ -26,6 +26,7 @@ if ($env:DESKTOP_PASSWORD -and $env:DESKTOP_PASSWORD -notmatch '^[a-zA-Z0-9]{1,8
 
 Add-Type -TypeDefinition @'
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 public static class DesktopDisplay
@@ -34,6 +35,13 @@ public static class DesktopDisplay
   private const int ChangeTest = 2;
   private const int DisplayWidth = 0x80000;
   private const int DisplayHeight = 0x100000;
+
+  public struct ResolutionResult
+  {
+    public int Result;
+    public int Width;
+    public int Height;
+  }
 
   [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
   private struct DevMode
@@ -82,7 +90,25 @@ public static class DesktopDisplay
   [DllImport("user32.dll", CharSet = CharSet.Auto)]
   private static extern int ChangeDisplaySettings(ref DevMode devMode, int flags);
 
-  public static int SetResolution(int width, int height)
+  private static int TrySetMode(ref DevMode mode)
+  {
+    var testResult = ChangeDisplaySettings(ref mode, ChangeTest);
+    if (testResult != 0)
+      return testResult;
+
+    return ChangeDisplaySettings(ref mode, 0);
+  }
+
+  private static double ModeDistance(DevMode mode, int width, int height)
+  {
+    var widthRatio = (double)mode.PelsWidth / width;
+    var heightRatio = (double)mode.PelsHeight / height;
+    var aspectRatio = ((double)mode.PelsWidth / mode.PelsHeight) / ((double)width / height);
+    return Math.Abs(Math.Log(widthRatio)) + Math.Abs(Math.Log(heightRatio)) +
+      2 * Math.Abs(Math.Log(aspectRatio));
+  }
+
+  public static ResolutionResult SetResolution(int width, int height)
   {
     var mode = new DevMode();
     mode.Size = (short)Marshal.SizeOf(typeof(DevMode));
@@ -93,18 +119,46 @@ public static class DesktopDisplay
     mode.PelsHeight = height;
     mode.Fields = DisplayWidth | DisplayHeight;
 
-    var testResult = ChangeDisplaySettings(ref mode, ChangeTest);
-    if (testResult != 0)
-      return testResult;
+    var result = TrySetMode(ref mode);
+    if (result == 0)
+      return new ResolutionResult { Result = 0, Width = width, Height = height };
 
-    return ChangeDisplaySettings(ref mode, 0);
+    var modes = new List<DevMode>();
+    for (var index = 0; ; index++)
+    {
+      var availableMode = new DevMode();
+      availableMode.Size = (short)Marshal.SizeOf(typeof(DevMode));
+      if (!EnumDisplaySettings(null, index, ref availableMode))
+        break;
+
+      if (availableMode.PelsWidth <= 0 || availableMode.PelsHeight <= 0 ||
+        (availableMode.PelsWidth == width && availableMode.PelsHeight == height))
+        continue;
+
+      availableMode.Fields = DisplayWidth | DisplayHeight;
+      modes.Add(availableMode);
+    }
+
+    modes.Sort((left, right) => ModeDistance(left, width, height).CompareTo(ModeDistance(right, width, height)));
+    foreach (var availableMode in modes)
+    {
+      var candidate = availableMode;
+      result = TrySetMode(ref candidate);
+      if (result == 0)
+        return new ResolutionResult { Result = 0, Width = candidate.PelsWidth, Height = candidate.PelsHeight };
+    }
+
+    return new ResolutionResult { Result = result, Width = 0, Height = 0 };
   }
 }
 '@
 
 $displayResult = [DesktopDisplay]::SetResolution(1500, 937)
-if ($displayResult -ne 0) {
-  throw "Could not set the desktop resolution to 1500x937 (display change result $displayResult)."
+if ($displayResult.Result -ne 0) {
+  throw "Could not set the desktop resolution to 1500x937 or any supported fallback (display change result $($displayResult.Result))."
+}
+if ($displayResult.Width -ne 1500 -or $displayResult.Height -ne 937) {
+  Write-Warning "The requested 1500x937 display mode is unavailable; using $($displayResult.Width)x$($displayResult.Height)."
 }
 
 if ($env:DESKTOP_PARSEC -eq 'true') {
