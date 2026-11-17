@@ -24,6 +24,89 @@ if ($env:DESKTOP_PASSWORD -and $env:DESKTOP_PASSWORD -notmatch '^[a-zA-Z0-9]{1,8
   throw 'TightVNC passwords must contain 1-8 ASCII letters or numbers.'
 }
 
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class DesktopDisplay
+{
+  private const int EnumCurrentSettings = -1;
+  private const int ChangeTest = 2;
+  private const int DisplayWidth = 0x80000;
+  private const int DisplayHeight = 0x100000;
+
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+  private struct DevMode
+  {
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+    public string DeviceName;
+    public short SpecVersion;
+    public short DriverVersion;
+    public short Size;
+    public short DriverExtra;
+    public int Fields;
+    public short Orientation;
+    public short PaperSize;
+    public short PaperLength;
+    public short PaperWidth;
+    public short Scale;
+    public short Copies;
+    public short DefaultSource;
+    public short PrintQuality;
+    public short Color;
+    public short Duplex;
+    public short YResolution;
+    public short TTOption;
+    public short Collate;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+    public string FormName;
+    public short LogPixels;
+    public int BitsPerPel;
+    public int PelsWidth;
+    public int PelsHeight;
+    public int DisplayFlags;
+    public int DisplayFrequency;
+    public int ICMMethod;
+    public int ICMIntent;
+    public int MediaType;
+    public int DitherType;
+    public int Reserved1;
+    public int Reserved2;
+    public int PanningWidth;
+    public int PanningHeight;
+  }
+
+  [DllImport("user32.dll", CharSet = CharSet.Auto)]
+  private static extern bool EnumDisplaySettings(string deviceName, int modeNumber, ref DevMode devMode);
+
+  [DllImport("user32.dll", CharSet = CharSet.Auto)]
+  private static extern int ChangeDisplaySettings(ref DevMode devMode, int flags);
+
+  public static int SetResolution(int width, int height)
+  {
+    var mode = new DevMode();
+    mode.Size = (short)Marshal.SizeOf(typeof(DevMode));
+    if (!EnumDisplaySettings(null, EnumCurrentSettings, ref mode))
+      throw new InvalidOperationException("Could not read the current display settings.");
+
+    mode.PelsWidth = width;
+    mode.PelsHeight = height;
+    mode.Fields = DisplayWidth | DisplayHeight;
+
+    var testResult = ChangeDisplaySettings(ref mode, ChangeTest);
+    if (testResult != 0)
+      return testResult;
+
+    return ChangeDisplaySettings(ref mode, 0);
+  }
+}
+'@
+
+$displayResult = [DesktopDisplay]::SetResolution(1500, 937)
+if ($displayResult -ne 0) {
+  throw "Could not set the desktop resolution to 1500x937 (display change result $displayResult)."
+}
+
 if ($env:DESKTOP_PARSEC -eq 'true') {
   if (-not $env:DESKTOP_PASSWORD) {
     throw 'A VNC password is required when starting the Parsec host.'
