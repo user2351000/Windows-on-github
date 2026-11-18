@@ -24,7 +24,9 @@ if ($env:DESKTOP_PASSWORD -and $env:DESKTOP_PASSWORD -notmatch '^[a-zA-Z0-9]{1,8
   throw 'TightVNC passwords must contain 1-8 ASCII letters or numbers.'
 }
 
-Install-Language -Language 'ja-JP' -ErrorAction Stop | Out-Null
+Write-Host 'Installing Japanese input support (excluding optional speech, OCR, and handwriting features)...'
+Install-Language -Language 'ja-JP' -ExcludeFeatures -ErrorAction Stop | Out-Null
+Write-Host 'Japanese language support installed.'
 $languageList = Get-WinUserLanguageList
 $japaneseLanguage = $languageList | Where-Object LanguageTag -eq 'ja-JP' | Select-Object -First 1
 if (-not $japaneseLanguage) {
