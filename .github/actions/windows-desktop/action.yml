@@ -73,3 +73,10 @@ runs:
         retention-days: 90
         compression-level: 0
         if-no-files-found: error
+
+    - name: Confirm desktop files saved
+      shell: pwsh
+      run: |
+        $message = 'デスクトップのファイルを保存しました。次回の起動時に復元されます。'
+        Write-Host "保存完了: $message"
+        "## 保存完了`n$message" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8

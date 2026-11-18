@@ -9,6 +9,10 @@ foreach ($folder in $folders) {
   New-Item -ItemType Directory -Force -Path (Join-Path $profile $folder) | Out-Null
 }
 
+if (Test-Path -LiteralPath $archive) {
+  Remove-Item -LiteralPath $archive -Force
+}
+
 $zip = [System.IO.Compression.ZipFile]::Open(
   $archive,
   [System.IO.Compression.ZipArchiveMode]::Create

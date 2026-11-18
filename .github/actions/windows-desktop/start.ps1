@@ -24,6 +24,24 @@ if ($env:DESKTOP_PASSWORD -and $env:DESKTOP_PASSWORD -notmatch '^[a-zA-Z0-9]{1,8
   throw 'TightVNC passwords must contain 1-8 ASCII letters or numbers.'
 }
 
+Install-Language -Language 'ja-JP' -ErrorAction Stop | Out-Null
+$languageList = Get-WinUserLanguageList
+$japaneseLanguage = $languageList | Where-Object LanguageTag -eq 'ja-JP' | Select-Object -First 1
+if (-not $japaneseLanguage) {
+  $japaneseLanguage = (New-WinUserLanguageList -Language 'ja-JP')[0]
+  $languageList.Insert(0, $japaneseLanguage)
+}
+if (-not $japaneseLanguage.InputMethodTips.Contains('0411:00000411')) {
+  $japaneseLanguage.InputMethodTips.Add('0411:00000411')
+}
+Set-WinUserLanguageList -LanguageList $languageList -Force
+Set-WinDefaultInputMethodOverride -InputTip '0411:00000411'
+$configuredJapanese = Get-WinUserLanguageList | Where-Object LanguageTag -eq 'ja-JP' | Select-Object -First 1
+if (-not $configuredJapanese -or -not $configuredJapanese.InputMethodTips.Contains('0411:00000411')) {
+  throw 'Could not configure the Japanese Microsoft IME.'
+}
+Write-Host 'Japanese Microsoft IME is ready.'
+
 Add-Type -TypeDefinition @'
 using System;
 using System.Collections.Generic;
