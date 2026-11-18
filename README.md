@@ -11,9 +11,9 @@
 
 ブラウザーを起動するワークフローは Chrome のみです。`AI Desktop Apps` ワークフローでは ChatGPT for Windows と Claude Desktop をインストールしてからデスクトップを起動します。
 
-## noVNCでの日本語入力
+## noVNCで日本語を入力する
 
-デスクトップ起動時に日本語言語機能とMicrosoft IMEを設定します。noVNC内のWindows画面で、タスクバーの入力表示（`ENG`、`A`、`あ`など）をクリックして日本語 Microsoft IMEに切り替えます。ChromebookなどWindowsキーがない端末でも、この方法で切り替えられます。入力表示が見つからない場合やキー入力で変換できない場合は、noVNCのClipboardボタンから日本語テキストを貼り付けてください。
+起動時間を短くするため、Windowsの日本語言語機能やMicrosoft IMEはインストールしません。日本語はnoVNCツールバーのClipboardボタンから入力・貼り付けてください。クリップボードの内容を送り、貼り付け先で`Ctrl`+`V`を押します。
 
 ## デスクトップデータの引き継ぎ
 
