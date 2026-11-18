@@ -13,4 +13,30 @@ if ($LASTEXITCODE -ne 0) {
   throw "Could not decrypt the previous desktop files (exit code $LASTEXITCODE). Check the repository secret."
 }
 
-[System.IO.Compression.ZipFile]::ExtractToDirectory($archive, $env:USERPROFILE, $true)
+$profile = [System.IO.Path]::GetFullPath($env:USERPROFILE)
+$profilePrefix = $profile.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+$zip = [System.IO.Compression.ZipFile]::OpenRead($archive)
+try {
+  foreach ($entry in $zip.Entries) {
+    $entryName = $entry.FullName.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
+    if ([System.IO.Path]::GetFileName($entryName) -ieq 'desktop.ini') {
+      continue
+    }
+
+    $destination = [System.IO.Path]::GetFullPath((Join-Path $profile $entryName))
+    if (-not $destination.StartsWith($profilePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+      throw "Desktop state archive contains an invalid path: $($entry.FullName)"
+    }
+
+    if ($entry.FullName.EndsWith('/')) {
+      New-Item -ItemType Directory -Force -Path $destination | Out-Null
+      continue
+    }
+
+    $parent = [System.IO.Path]::GetDirectoryName($destination)
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $destination, $true)
+  }
+} finally {
+  $zip.Dispose()
+}

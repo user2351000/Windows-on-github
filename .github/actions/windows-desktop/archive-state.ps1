@@ -31,6 +31,9 @@ try {
           $pending.Push($entry)
           continue
         }
+        if ([System.IO.Path]::GetFileName($entry) -ieq 'desktop.ini') {
+          continue
+        }
 
         $entryName = [System.IO.Path]::GetRelativePath($profile, $entry).Replace('\', '/')
         [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
