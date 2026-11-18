@@ -255,7 +255,7 @@ if ($browser) {
 }
 
 try {
-  node .github/actions/windows-desktop/start.js $cloudflared
+  node .github/actions/windows-desktop/start.js $cloudflared $env:DESKTOP_AUTO_STOP_AT
   if ($LASTEXITCODE -ne 0) {
     throw "Desktop tunnel exited with code $LASTEXITCODE."
   }

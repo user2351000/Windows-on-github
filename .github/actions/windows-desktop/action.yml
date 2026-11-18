@@ -23,6 +23,13 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Set desktop auto-stop deadline
+      id: auto-stop
+      shell: pwsh
+      run: |
+        $deadline = [DateTimeOffset]::UtcNow.AddMinutes(330).ToUnixTimeMilliseconds()
+        "deadline=$deadline" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
     - name: Find previous desktop state
       id: previous-state
       shell: pwsh
@@ -53,6 +60,7 @@ runs:
         DESKTOP_PASSWORD: ${{ inputs.password }}
         DESKTOP_PROFILE_DIR: ${{ inputs.profile-dir }}
         DESKTOP_PARSEC: ${{ inputs.parsec }}
+        DESKTOP_AUTO_STOP_AT: ${{ steps.auto-stop.outputs.deadline }}
       run: ./.github/actions/windows-desktop/start.ps1
 
     - name: Archive desktop files

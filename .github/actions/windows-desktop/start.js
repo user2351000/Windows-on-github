@@ -4,9 +4,18 @@ const { spawn } = require("node:child_process");
 
 const port = 8090;
 let stoppingNormally = false;
+const autoStopAt = Number(process.argv[3]);
+if (!Number.isSafeInteger(autoStopAt)) {
+  throw new Error("The desktop auto-stop deadline is missing or invalid.");
+}
 const cloudflared = spawn(process.argv[2], ["tunnel", "--no-autoupdate", "--url", `http://127.0.0.1:${port}`], {
   stdio: "inherit",
 });
+const autoStopTimer = setTimeout(() => {
+  console.log("Automatically stopping the desktop session so its files can be saved.");
+  stoppingNormally = true;
+  cloudflared.kill();
+}, Math.max(0, autoStopAt - Date.now()));
 
 const server = http.createServer((request, response) => {
   if (request.url === "/x" || request.url === "/x/") {
@@ -55,9 +64,11 @@ server.listen(port, "127.0.0.1");
 
 cloudflared.on("error", (error) => {
   console.error(`Could not start cloudflared: ${error.message}`);
+  clearTimeout(autoStopTimer);
   server.close(() => process.exit(1));
 });
 cloudflared.on("exit", (code) => {
+  clearTimeout(autoStopTimer);
   server.close(() => process.exit(stoppingNormally ? 0 : (code ?? 0)));
 });
 
