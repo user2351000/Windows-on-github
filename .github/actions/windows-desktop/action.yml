@@ -2,7 +2,7 @@ name: Windows desktop
 description: Start a browser-accessible Windows desktop session
 inputs:
   browser:
-    description: Browser to launch
+    description: Launch Chrome
     required: false
     default: ''
   password:

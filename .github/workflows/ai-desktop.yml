@@ -1,0 +1,31 @@
+name: AI Desktop Apps
+
+on:
+  workflow_dispatch:
+
+jobs:
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ChatGPT for Windows
+        shell: pwsh
+        run: |
+          winget install --id 9NT1R1C2HH7J --source msstore --exact --silent --accept-source-agreements --accept-package-agreements
+          if ($LASTEXITCODE -ne 0) {
+            throw "ChatGPT installation failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Install Claude Desktop
+        shell: pwsh
+        run: |
+          winget install --id Anthropic.Claude --exact --silent --accept-source-agreements --accept-package-agreements
+          if ($LASTEXITCODE -ne 0) {
+            throw "Claude Desktop installation failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Start Windows desktop with Chrome
+        uses: ./.github/actions/windows-desktop
+        with:
+          browser: chrome

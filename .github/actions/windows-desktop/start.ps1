@@ -237,28 +237,19 @@ Invoke-WebRequest `
   -OutFile $cloudflared
 
 $browser = $env:DESKTOP_BROWSER
-$browserPath = switch ($browser) {
-  'chrome' { 'C:\Program Files\Google\Chrome\Application\chrome.exe' }
-  'chromium' { 'C:\Program Files\Google\Chrome\Application\chrome.exe' }
-  'msedge' { 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' }
-  'firefox' { 'C:\Program Files\Mozilla Firefox\firefox.exe' }
-  default { $null }
-}
-
 $browserProcess = $null
-if ($browserPath) {
-  if (-not (Test-Path $browserPath)) {
-    throw "$browser is not installed at $browserPath."
+$browserPath = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+if ($browser) {
+  if ($browser -ne 'chrome') {
+    throw "Unsupported browser '$browser'. Only Chrome is supported."
   }
-
+  if (-not (Test-Path $browserPath)) {
+    throw "Chrome is not installed at $browserPath."
+  }
   $browserArgs = @()
   if ($env:DESKTOP_PROFILE_DIR) {
     New-Item -ItemType Directory -Force -Path $env:DESKTOP_PROFILE_DIR | Out-Null
-    if ($browser -eq 'firefox') {
-      $browserArgs += @('-profile', $env:DESKTOP_PROFILE_DIR)
-    } else {
-      $browserArgs += "--user-data-dir=$env:DESKTOP_PROFILE_DIR"
-    }
+    $browserArgs += "--user-data-dir=$env:DESKTOP_PROFILE_DIR"
   }
   $browserArgs += 'https://duckduckgo.com/'
   $browserProcess = Start-Process -FilePath $browserPath -ArgumentList $browserArgs -PassThru
