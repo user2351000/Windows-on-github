@@ -3,28 +3,18 @@ name: Chrome
 on:
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   desktop:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Restore Chrome profile
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ runner.temp }}/chrome-profile
-          key: chrome-profile-${{ github.actor_id }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            chrome-profile-${{ github.actor_id }}-
-
       - name: Start Windows desktop with Chrome
         uses: ./.github/actions/windows-desktop
         with:
           browser: chrome
-          profile-dir: ${{ runner.temp }}/chrome-profile
-
-      - name: Save Chrome profile
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ runner.temp }}/chrome-profile
-          key: chrome-profile-${{ github.actor_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          state-encryption-key: ${{ secrets.WINDOWS_DESKTOP_STATE_ENCRYPTION_KEY }}

@@ -11,3 +11,13 @@
 
 ブラウザーを起動するワークフローは Chrome のみです。`AI Desktop Apps` ワークフローでは ChatGPT for Windows と Claude Desktop をインストールしてからデスクトップを起動します。
 
+## デスクトップデータの引き継ぎ
+
+GitHub-hosted runner は毎回新しいWindows環境なので、デスクトップを正常に停止（`x` または `x/`）すると、次回実行用に `Desktop`、`Documents`、`Downloads`、`Pictures`、`Videos`、`Music` とChromeプロファイルを暗号化してActions artifactへ保存します。停止せずにワークフローをキャンセルした場合、その回の変更は保存されません。artifactの保持期間は90日です。保存データが競合しないよう、デスクトップのワークフローは同時に複数起動しないでください。アプリ本体は保存されず、ワークフローで指定されたアプリは起動ごとに再インストールされます。
+
+公開リポジトリでもファイルを平文で公開しないよう、暗号化キーの登録が必要です。
+
+1. ローカルで `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` を実行してキーを生成する
+2. リポジトリの **Settings → Secrets and variables → Actions** で、`WINDOWS_DESKTOP_STATE_ENCRYPTION_KEY` というRepository secretを作り、生成したキーを登録する
+3. 以降のデスクトップ起動ワークフローでは、同じSecretが使われます。キーを紛失・変更すると、保存済みデータを復号できません
+

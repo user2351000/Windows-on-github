@@ -3,6 +3,10 @@ name: AI Desktop Apps
 on:
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   desktop:
     runs-on: windows-latest
@@ -29,3 +33,4 @@ jobs:
         uses: ./.github/actions/windows-desktop
         with:
           browser: chrome
+          state-encryption-key: ${{ secrets.WINDOWS_DESKTOP_STATE_ENCRYPTION_KEY }}

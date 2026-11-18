@@ -3,6 +3,10 @@ name: Windows Desktop
 on:
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   desktop:
     runs-on: windows-latest
@@ -11,3 +15,5 @@ jobs:
 
       - name: Start Windows desktop
         uses: ./.github/actions/windows-desktop
+        with:
+          state-encryption-key: ${{ secrets.WINDOWS_DESKTOP_STATE_ENCRYPTION_KEY }}

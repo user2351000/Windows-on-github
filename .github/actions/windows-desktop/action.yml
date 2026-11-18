@@ -17,9 +17,35 @@ inputs:
     description: Install and launch the Parsec host
     required: false
     default: 'false'
+  state-encryption-key:
+    description: Base64-encoded 32-byte key stored as a GitHub Actions secret
+    required: true
 runs:
   using: composite
   steps:
+    - name: Find previous desktop state
+      id: previous-state
+      shell: pwsh
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        DESKTOP_STATE_ENCRYPTION_KEY: ${{ inputs.state-encryption-key }}
+      run: node .github/actions/windows-desktop/state.js find
+
+    - name: Download previous desktop state
+      if: steps.previous-state.outputs.run-id != ''
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-desktop-state
+        path: ${{ runner.temp }}/windows-desktop-state-download
+        run-id: ${{ steps.previous-state.outputs.run-id }}
+        github-token: ${{ github.token }}
+
+    - name: Restore previous desktop files
+      shell: pwsh
+      env:
+        DESKTOP_STATE_ENCRYPTION_KEY: ${{ inputs.state-encryption-key }}
+      run: ./.github/actions/windows-desktop/restore-state.ps1
+
     - name: Start Windows desktop
       shell: pwsh
       env:
@@ -28,3 +54,22 @@ runs:
         DESKTOP_PROFILE_DIR: ${{ inputs.profile-dir }}
         DESKTOP_PARSEC: ${{ inputs.parsec }}
       run: ./.github/actions/windows-desktop/start.ps1
+
+    - name: Archive desktop files
+      shell: pwsh
+      run: ./.github/actions/windows-desktop/archive-state.ps1
+
+    - name: Encrypt desktop files
+      shell: pwsh
+      env:
+        DESKTOP_STATE_ENCRYPTION_KEY: ${{ inputs.state-encryption-key }}
+      run: node .github/actions/windows-desktop/state.js encrypt "${{ runner.temp }}/windows-desktop-state.zip" "${{ runner.temp }}/windows-desktop-state.enc"
+
+    - name: Save desktop files
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-desktop-state
+        path: ${{ runner.temp }}/windows-desktop-state.enc
+        retention-days: 90
+        compression-level: 0
+        if-no-files-found: error

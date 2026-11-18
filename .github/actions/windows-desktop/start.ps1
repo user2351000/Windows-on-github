@@ -247,10 +247,9 @@ if ($browser) {
     throw "Chrome is not installed at $browserPath."
   }
   $browserArgs = @()
-  if ($env:DESKTOP_PROFILE_DIR) {
-    New-Item -ItemType Directory -Force -Path $env:DESKTOP_PROFILE_DIR | Out-Null
-    $browserArgs += "--user-data-dir=$env:DESKTOP_PROFILE_DIR"
-  }
+  $profileDir = if ($env:DESKTOP_PROFILE_DIR) { $env:DESKTOP_PROFILE_DIR } else { Join-Path $env:USERPROFILE 'ChromeProfile' }
+  New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+  $browserArgs += "--user-data-dir=$profileDir"
   $browserArgs += 'https://duckduckgo.com/'
   $browserProcess = Start-Process -FilePath $browserPath -ArgumentList $browserArgs -PassThru
 }

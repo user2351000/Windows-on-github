@@ -3,6 +3,10 @@ name: Parsec Web (experimental)
 on:
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   desktop:
     runs-on: windows-latest
@@ -14,3 +18,4 @@ jobs:
         with:
           password: ${{ secrets.PARSEC_BOOTSTRAP_VNC_PASSWORD }}
           parsec: 'true'
+          state-encryption-key: ${{ secrets.WINDOWS_DESKTOP_STATE_ENCRYPTION_KEY }}
