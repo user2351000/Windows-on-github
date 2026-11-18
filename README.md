@@ -1,6 +1,40 @@
 # GitHub Actions Windows Desktop
 
-## 使用方法
+## 自分用です使い方分かる人だけ使っていいよ
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 1. このリポジトリをFork（フォーク）する
 2. [Windows Desktopワークフロー](../../actions/workflows/desktop.yml)を開く
