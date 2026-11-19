@@ -13,6 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Visual Studio Code
+        shell: pwsh
+        run: |
+          winget install --id Microsoft.VisualStudioCode --exact --silent --accept-source-agreements --accept-package-agreements
+          if ($LASTEXITCODE -ne 0) {
+            throw "Visual Studio Code installation failed with exit code $LASTEXITCODE."
+          }
+
       - name: Install ChatGPT for Windows
         shell: pwsh
         run: |
