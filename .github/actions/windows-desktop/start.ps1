@@ -24,6 +24,14 @@ if ($env:DESKTOP_PASSWORD -and $env:DESKTOP_PASSWORD -notmatch '^[a-zA-Z0-9]{1,8
   throw 'TightVNC passwords must contain 1-8 ASCII letters or numbers.'
 }
 
+Write-Host 'Installing Japanese language support and configuring Japanese as the only user language.'
+Install-Language -Language ja-JP -CopyToSettings
+$japaneseLanguage = New-WinUserLanguageList -Language ja-JP
+Set-WinUserLanguageList -LanguageList $japaneseLanguage -Force
+Set-WinUILanguageOverride -Language ja-JP
+Set-Culture -CultureInfo ja-JP
+Set-WinSystemLocale -SystemLocale ja-JP
+
 Add-Type -TypeDefinition @'
 using System;
 using System.Collections.Generic;
