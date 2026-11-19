@@ -1,6 +1,6 @@
 # GitHub Actions Windows Desktop
 
-## 自分用です使い方分かる人だけ使っていいよ
+## xみれない。とても不便
 
 >
 >
