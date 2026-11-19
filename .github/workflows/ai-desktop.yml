@@ -21,20 +21,43 @@ jobs:
             throw "Visual Studio Code installation failed with exit code $LASTEXITCODE."
           }
 
-      - name: Install ChatGPT for Windows
+      - name: Install ChatGPT and Claude Desktop
         shell: pwsh
         run: |
-          winget install --id OpenAI.ChatGPT --source winget --exact --silent --accept-source-agreements --accept-package-agreements
-          if ($LASTEXITCODE -ne 0) {
-            throw "ChatGPT installation failed with exit code $LASTEXITCODE."
+          $packages = @('OpenAI.ChatGPT', 'Anthropic.Claude')
+          $installers = foreach ($package in $packages) {
+            $stdout = Join-Path $env:RUNNER_TEMP "${package}.stdout.log"
+            $stderr = Join-Path $env:RUNNER_TEMP "${package}.stderr.log"
+            $arguments = @(
+              'install', '--id', $package, '--source', 'winget', '--exact',
+              '--silent', '--accept-source-agreements', '--accept-package-agreements'
+            )
+            [pscustomobject]@{
+              Package = $package
+              Process = Start-Process -FilePath winget.exe -ArgumentList $arguments -PassThru `
+                -WindowStyle Hidden `
+                -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+              Stdout = $stdout
+              Stderr = $stderr
+            }
           }
 
-      - name: Install Claude Desktop
-        shell: pwsh
-        run: |
-          winget install --id Anthropic.Claude --source winget --exact --silent --accept-source-agreements --accept-package-agreements
-          if ($LASTEXITCODE -ne 0) {
-            throw "Claude Desktop installation failed with exit code $LASTEXITCODE."
+          $failures = @()
+          foreach ($installer in $installers) {
+            $installer.Process.WaitForExit()
+            Write-Host "Output from $($installer.Package):"
+            if (Test-Path -LiteralPath $installer.Stdout) {
+              Get-Content -LiteralPath $installer.Stdout
+            }
+            if (Test-Path -LiteralPath $installer.Stderr) {
+              Get-Content -LiteralPath $installer.Stderr
+            }
+            if ($installer.Process.ExitCode -ne 0) {
+              $failures += "$($installer.Package) failed with exit code $($installer.Process.ExitCode)."
+            }
+          }
+          if ($failures.Count -gt 0) {
+            throw ($failures -join [Environment]::NewLine)
           }
 
       - name: Start Windows desktop with Chrome
