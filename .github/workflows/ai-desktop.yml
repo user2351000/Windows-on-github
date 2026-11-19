@@ -16,7 +16,7 @@ jobs:
       - name: Install Visual Studio Code
         shell: pwsh
         run: |
-          winget install --id Microsoft.VisualStudioCode --exact --silent --accept-source-agreements --accept-package-agreements
+          winget install --id Microsoft.VisualStudioCode --source winget --exact --silent --accept-source-agreements --accept-package-agreements
           if ($LASTEXITCODE -ne 0) {
             throw "Visual Studio Code installation failed with exit code $LASTEXITCODE."
           }
@@ -24,7 +24,7 @@ jobs:
       - name: Install ChatGPT for Windows
         shell: pwsh
         run: |
-          winget install --id OpenAI.ChatGPT --exact --silent --accept-source-agreements --accept-package-agreements
+          winget install --id OpenAI.ChatGPT --source winget --exact --silent --accept-source-agreements --accept-package-agreements
           if ($LASTEXITCODE -ne 0) {
             throw "ChatGPT installation failed with exit code $LASTEXITCODE."
           }
@@ -32,7 +32,7 @@ jobs:
       - name: Install Claude Desktop
         shell: pwsh
         run: |
-          winget install --id Anthropic.Claude --exact --silent --accept-source-agreements --accept-package-agreements
+          winget install --id Anthropic.Claude --source winget --exact --silent --accept-source-agreements --accept-package-agreements
           if ($LASTEXITCODE -ne 0) {
             throw "Claude Desktop installation failed with exit code $LASTEXITCODE."
           }
