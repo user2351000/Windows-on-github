@@ -13,6 +13,10 @@ inputs:
     description: Optional browser profile directory
     required: false
     default: ''
+  application-dirs:
+    description: Semicolon-separated additional application directories to persist
+    required: false
+    default: ''
   parsec:
     description: Install and launch the Parsec host
     required: false
@@ -51,6 +55,8 @@ runs:
       shell: pwsh
       env:
         DESKTOP_STATE_ENCRYPTION_KEY: ${{ inputs.state-encryption-key }}
+        DESKTOP_PROFILE_DIR: ${{ inputs.profile-dir }}
+        DESKTOP_APPLICATION_DIRS: ${{ inputs.application-dirs }}
       run: ./.github/actions/windows-desktop/restore-state.ps1
 
     - name: Start Windows desktop
@@ -65,6 +71,9 @@ runs:
 
     - name: Archive desktop files
       shell: pwsh
+      env:
+        DESKTOP_PROFILE_DIR: ${{ inputs.profile-dir }}
+        DESKTOP_APPLICATION_DIRS: ${{ inputs.application-dirs }}
       run: ./.github/actions/windows-desktop/archive-state.ps1
 
     - name: Encrypt desktop files

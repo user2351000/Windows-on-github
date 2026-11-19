@@ -237,7 +237,7 @@ Invoke-WebRequest `
   -OutFile $cloudflared
 
 $browser = $env:DESKTOP_BROWSER
-$browserProcess = $null
+$browserProfileDir = $null
 $browserPath = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
 if ($browser) {
   if ($browser -ne 'chrome') {
@@ -247,11 +247,15 @@ if ($browser) {
     throw "Chrome is not installed at $browserPath."
   }
   $browserArgs = @()
-  $profileDir = if ($env:DESKTOP_PROFILE_DIR) { $env:DESKTOP_PROFILE_DIR } else { Join-Path $env:USERPROFILE 'ChromeProfile' }
-  New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
-  $browserArgs += "--user-data-dir=$profileDir"
+  $browserProfileDir = if ($env:DESKTOP_PROFILE_DIR) {
+    [System.IO.Path]::GetFullPath($env:DESKTOP_PROFILE_DIR)
+  } else {
+    Join-Path $env:USERPROFILE 'ChromeProfile'
+  }
+  New-Item -ItemType Directory -Force -Path $browserProfileDir | Out-Null
+  $browserArgs += "--user-data-dir=`"$browserProfileDir`""
   $browserArgs += 'https://duckduckgo.com/'
-  $browserProcess = Start-Process -FilePath $browserPath -ArgumentList $browserArgs -PassThru
+  Start-Process -FilePath $browserPath -ArgumentList $browserArgs | Out-Null
 }
 
 try {
@@ -260,7 +264,41 @@ try {
     throw "Desktop tunnel exited with code $LASTEXITCODE."
   }
 } finally {
-  if ($browserProcess -and -not $browserProcess.HasExited) {
-    Stop-Process -Id $browserProcess.Id -Force
+  if ($browserProfileDir) {
+    $chromeProcesses = {
+      Get-CimInstance Win32_Process -Filter "Name = 'chrome.exe'" |
+        Where-Object { $_.CommandLine -and $_.CommandLine.IndexOf($browserProfileDir, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 }
+    }
+
+    foreach ($chrome in (& $chromeProcesses)) {
+      $process = Get-Process -Id $chrome.ProcessId -ErrorAction SilentlyContinue
+      if ($process -and $process.MainWindowHandle -ne 0) {
+        $process.CloseMainWindow() | Out-Null
+      }
+    }
+
+    $shutdownDeadline = [DateTime]::UtcNow.AddSeconds(30)
+    do {
+      $remainingChromeProcesses = @(& $chromeProcesses)
+      if ($remainingChromeProcesses.Count -eq 0) {
+        break
+      }
+      Start-Sleep -Milliseconds 500
+    } while ([DateTime]::UtcNow -lt $shutdownDeadline)
+
+    foreach ($chrome in $remainingChromeProcesses) {
+      Stop-Process -Id $chrome.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+    $shutdownDeadline = [DateTime]::UtcNow.AddSeconds(10)
+    do {
+      $remainingChromeProcesses = @(& $chromeProcesses)
+      if ($remainingChromeProcesses.Count -eq 0) {
+        break
+      }
+      Start-Sleep -Milliseconds 250
+    } while ([DateTime]::UtcNow -lt $shutdownDeadline)
+    if ($remainingChromeProcesses.Count -gt 0) {
+      throw 'Chrome processes using the saved profile did not exit; refusing to archive an active profile.'
+    }
   }
 }

@@ -14,7 +14,41 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $profile = [System.IO.Path]::GetFullPath($env:USERPROFILE)
-$profilePrefix = $profile.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+$chromeProfile = if ($env:DESKTOP_PROFILE_DIR) {
+  [System.IO.Path]::GetFullPath($env:DESKTOP_PROFILE_DIR)
+} else {
+  Join-Path $profile 'ChromeProfile'
+}
+$applicationRoots = @()
+$applicationDirectories = @((Join-Path $env:LOCALAPPDATA 'Programs'))
+if ($env:DESKTOP_APPLICATION_DIRS) {
+  $applicationDirectories += ($env:DESKTOP_APPLICATION_DIRS -split ';')
+}
+foreach ($directory in $applicationDirectories) {
+  $expandedDirectory = [Environment]::ExpandEnvironmentVariables($directory.Trim())
+  if (-not $expandedDirectory) {
+    continue
+  }
+
+  $applicationPath = [System.IO.Path]::GetFullPath($expandedDirectory)
+  if ($applicationRoots.Path -contains $applicationPath) {
+    continue
+  }
+
+  $identity = $applicationPath.TrimEnd('\').ToUpperInvariant()
+  $sha256 = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $hash = [BitConverter]::ToString(
+      $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($identity))
+    ).Replace('-', '').ToLowerInvariant()
+  } finally {
+    $sha256.Dispose()
+  }
+  $applicationRoots += [pscustomobject]@{
+    Path = $applicationPath
+    ArchivePrefix = "__windows_desktop_applications__/$hash/"
+  }
+}
 $zip = [System.IO.Compression.ZipFile]::OpenRead($archive)
 try {
   foreach ($entry in $zip.Entries) {
@@ -23,8 +57,34 @@ try {
       continue
     }
 
-    $destination = [System.IO.Path]::GetFullPath((Join-Path $profile $entryName))
-    if (-not $destination.StartsWith($profilePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    $isChromeProfile = $entry.FullName.StartsWith(
+      '__windows_desktop_chrome_profile__/',
+      [System.StringComparison]::Ordinal
+    )
+    $applicationRoot = $applicationRoots | Where-Object {
+      $entry.FullName.StartsWith($_.ArchivePrefix, [System.StringComparison]::Ordinal)
+    } | Select-Object -First 1
+    if ($isChromeProfile) {
+      $relativeName = $entry.FullName.Substring('__windows_desktop_chrome_profile__/'.Length)
+      $destinationRoot = $chromeProfile
+    } elseif ($entry.FullName.StartsWith('__windows_desktop_applications__/', [System.StringComparison]::Ordinal)) {
+      if (-not $applicationRoot) {
+        throw "The desktop state contains application files for an unconfigured directory: $($entry.FullName)"
+      }
+      $relativeName = $entry.FullName.Substring($applicationRoot.ArchivePrefix.Length)
+      $destinationRoot = $applicationRoot.Path
+    } elseif ($entryName.StartsWith("ChromeProfile$([System.IO.Path]::DirectorySeparatorChar)", [System.StringComparison]::OrdinalIgnoreCase)) {
+      $relativeName = $entryName.Substring("ChromeProfile$([System.IO.Path]::DirectorySeparatorChar)".Length)
+      $destinationRoot = $chromeProfile
+    } else {
+      $relativeName = $entryName
+      $destinationRoot = $profile
+    }
+
+    $destinationRoot = [System.IO.Path]::GetFullPath($destinationRoot)
+    $rootPrefix = $destinationRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+    $destination = [System.IO.Path]::GetFullPath((Join-Path $destinationRoot $relativeName))
+    if (-not $destination.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
       throw "Desktop state archive contains an invalid path: $($entry.FullName)"
     }
 
