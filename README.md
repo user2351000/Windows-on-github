@@ -1,51 +1,6 @@
 # GitHub Actions Windows Desktop
 
-## xみれない。とても不便
-
->
->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## アカウント認証できないのは聞いてないんだが
 1. このリポジトリをFork（フォーク）する
 2. [Windows Desktopワークフロー](../../actions/workflows/desktop.yml)を開く
 3. ワークフローを実行し、ログに表示されたDesktopのURLを開く
@@ -69,6 +24,6 @@ Chromeのプロファイル（ブックマークや設定など）は保存・�
 
 公開リポジトリでもファイルを平文で公開しないよう、暗号化キーの登録が必要です。
 
-1. ローカルで `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` を実行してキーを生成する
+1. https://www.luft.co.jp/cgi/randam.phpとかで32ケタの英数字コードを生成する
 2. リポジトリの **Settings → Secrets and variables → Actions** で、`WINDOWS_DESKTOP_STATE_ENCRYPTION_KEY` というRepository secretを作り、生成したキーを登録する
 3. 以降のデスクトップ起動ワークフローでは、同じSecretが使われます。キーを紛失・変更すると、保存済みデータを復号できません
